@@ -34,6 +34,7 @@ const fetchData = async () => {
   // console.log("data");
   // console.dir(data);
   const listSysName = formatResponseFromApi(data);
+  console.log(JSON.stringify(listSysName, null, 4));
 };
 
 function isSameDay(dataNext, dataNow) {
@@ -44,7 +45,46 @@ function isSameDay(dataNext, dataNow) {
   );
 }
 
+function formatDate(date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Les mois commencent à 0
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function isTodayOrBefore(dateToCompare, today) {
+  // const todayFormatted = formatDate(today);
+  // const formattedDateToCompare = formatDate(dateToCompare);
+
+  const todayFormatted = today.setHours(0, 0, 0, 0);
+  const formattedDateToCompare = dateToCompare.setHours(0, 0, 0, 0);
+
+  console.log(
+    "todayFormatted: " + todayFormatted + "  typeof : " + typeof todayFormatted
+  );
+  console.log(
+    "formattedDateToCompare: " +
+      formattedDateToCompare +
+      "  typeof : " +
+      typeof formattedDateToCompare
+  );
+  console.log(
+    "formattedDateToCompare <= todayFormatted: " + formattedDateToCompare <=
+      todayFormatted
+  );
+
+  console.log(
+    "formattedDateToCompare <= todayFormatted: " +
+      parseInt(formattedDateToCompare) -
+      parseInt(todayFormatted)
+  );
+
+  return formattedDateToCompare <= todayFormatted;
+}
+
 function formatResponseFromApi(json) {
+  const dateNow = new Date();
+
   return json.results
     .map((page, _) => {
       const dataId = page.properties["Système"].title[0].mention.page.id;
@@ -75,7 +115,8 @@ function formatResponseFromApi(json) {
         dataCommentaire,
       };
     })
-    .sort((a, b) => a.dataNext - b.dataNext);
+    .sort((a, b) => a.dataNext - b.dataNext)
+    .filter((task) => task.dataJours <= 0);
 }
 
 // Appel de la fonction

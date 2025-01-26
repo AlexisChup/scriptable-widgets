@@ -11,7 +11,7 @@ if (apiResponse !== null) {
   const PADDING = 22;
   widget.setPadding(PADDING, PADDING, PADDING, PADDING);
 
-  if (nextTasks.dataJours !== 0) {
+  if (nextTasks.dataJours > 0) {
     createChillWidget(widget, nextTasks);
   } else {
     const tasksTodays = getTasksToday(formattedResponse);
@@ -91,18 +91,8 @@ function formatResponseFromApi(json) {
     .sort((a, b) => a.dataNext - b.dataNext);
 }
 
-function isSameDay(dataNext, dataNow) {
-  return (
-    dataNow.getFullYear() === dataNext.getFullYear() &&
-    dataNow.getMonth() === dataNext.getMonth() &&
-    dataNow.getDate() === dataNext.getDate()
-  );
-}
-
 function getTasksToday(formattedResponse) {
-  const dateNow = new Date();
-
-  return formattedResponse.filter((item) => isSameDay(dateNow, item.dataNext));
+  return formattedResponse.filter((task) => task.dataJours <= 0);
 }
 
 function createChillWidget(widget, nextTasks) {
@@ -182,6 +172,7 @@ function handleNotifications(tasksTodays, allTasks) {
   }
 
   tasksToSet = simplifyTasksToStore(tasksToSet);
+  console.log(JSON.stringify(tasksToSet, null, 4));
 
   Keychain.set(KEY_LAST_UPDATE, JSON.stringify(tasksToSet));
 }
