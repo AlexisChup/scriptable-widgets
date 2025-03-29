@@ -8,8 +8,7 @@ const WIDGET_CONFIG = {
 
 // Main widget creation function
 async function createWidget() {
-  const data = await loadData();
-  const isFromStorage = !(await loadNotionData());
+  const { data, isFromStorage } = await loadData();
   const widget = buildWidget(data, isFromStorage);
   await saveData(data);
   return widget;
@@ -19,13 +18,20 @@ async function createWidget() {
 async function loadData() {
   const apiData = await loadNotionData();
   if (apiData) {
-    return formatResponseFromApi(apiData);
+    return {
+      data: formatResponseFromApi(apiData),
+      isFromStorage: false,
+    };
   }
 
   const previousData = await loadPreviousData();
   if (previousData) {
-    return convertStoredDates(previousData);
+    return {
+      data: convertStoredDates(previousData),
+      isFromStorage: true,
+    };
   }
+
   return null;
 }
 
@@ -111,7 +117,7 @@ function setupWidgetLayout(widget) {
 
 function addWidgetHeader(widget, isFromStorage = false) {
   const header = widget.addText(
-    `🚀 Actions à venir${isFromStorage ? " (Données précédentes)" : ""}`
+    `🚀 Actions à venir${isFromStorage ? " 📱" : " 🔄"}`
   );
   header.font = Font.blackSystemFont(20);
   widget.addSpacer(8);
@@ -126,21 +132,14 @@ function addWidgetContent(widget, data) {
 }
 
 function addStatusFooter(widget, isFromStorage) {
+  widget.addSpacer();
 
-  const footerStack = widget.addStack();
-  footerStack.layoutHorizontally();
-  footerStack.spacing = 4;
-
-  const statusIcon = footerStack.addText(isFromStorage ? "📱" : "🔄");
-  statusIcon.font = Font.systemFont(10);
-
-  const statusText = footerStack.addText(
-    `${
-      isFromStorage ? "Données locales" : "Synchronisé"
-    } • ${new Date().toLocaleTimeString()}`
+  const statusText = widget.addText(
+    `${isFromStorage ? "📱" : "🔄"} • ${new Date().toLocaleTimeString()}`
   );
   statusText.font = Font.systemFont(10);
   statusText.textColor = Color.gray();
+  statusText.rightAlignText();
 }
 
 function buildErrorWidget() {

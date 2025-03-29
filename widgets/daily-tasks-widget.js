@@ -12,8 +12,7 @@ const STORAGE_KEYS = {
 
 // Main widget creation function
 async function createWidget() {
-  const data = await loadData();
-  const isFromStorage = !(await loadNotionData());
+  const { data, isFromStorage } = await loadData();
   if (!data) {
     return buildErrorWidget();
   }
@@ -44,12 +43,18 @@ async function createWidget() {
 async function loadData() {
   const apiData = await loadNotionData();
   if (apiData) {
-    return formatResponseFromApi(apiData);
+    return {
+      data: formatResponseFromApi(apiData),
+      isFromStorage: false,
+    };
   }
 
   const previousData = await loadPreviousData();
   if (previousData) {
-    return convertStoredDates(previousData);
+    return {
+      data: convertStoredDates(previousData),
+      isFromStorage: true,
+    };
   }
   return null;
 }
