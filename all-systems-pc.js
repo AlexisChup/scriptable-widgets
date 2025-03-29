@@ -82,11 +82,31 @@ function isTodayOrBefore(dateToCompare, today) {
   return formattedDateToCompare <= todayFormatted;
 }
 
+// Data formatting functions
+function extractIconFromName(taskName, properties) {
+  // Chercher dans les clés des propriétés une correspondance avec le nom de la tâche
+  const matchingKey = Object.keys(properties).find((key) =>
+    key.includes(taskName)
+  );
+
+  if (matchingKey) {
+    // Extraire l'emoji du début de la clé si présent
+    const emojiMatch = matchingKey.match(/^[\u{1F300}-\u{1F9FF}]/u);
+    if (emojiMatch) return emojiMatch[0];
+  }
+
+  return "📝"; // Emoji par défaut
+}
+
 function formatResponseFromApi(json) {
   const dateNow = new Date();
 
   return json.results
     .map((page, _) => {
+      const taskName = page.properties["Système"].title[0].plain_text;
+      const icon = extractIconFromName(taskName, page.properties);
+      console.log("icon: " + icon);
+
       const dataId = page.properties["Système"].title[0].mention.page.id;
       const dataName = page.properties["Système"].title[0].plain_text;
       const dataUrl = page.properties["Système"].title[0].href;
@@ -100,8 +120,8 @@ function formatResponseFromApi(json) {
       const dataActions = page.properties["Actions"].formula.string;
       const dataCommentaire = page.properties["Commentaire"].formula.string;
 
-      console.log("dataId");
-      console.log(dataId);
+      // console.log("dataId");
+      // console.log(dataId);
 
       return {
         dataId,

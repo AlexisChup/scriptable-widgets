@@ -187,11 +187,31 @@ function buildErrorWidget() {
 }
 
 // Data formatting functions
+function extractIconFromName(taskName, properties) {
+  // Chercher dans les clés des propriétés une correspondance avec le nom de la tâche
+  const matchingKey = Object.keys(properties).find((key) =>
+    key.includes(taskName)
+  );
+
+  if (matchingKey) {
+    // Extraire l'emoji du début de la clé si présent
+    const emojiMatch = matchingKey.match(/^[\u{1F300}-\u{1F9FF}]/u);
+    if (emojiMatch) return emojiMatch[0];
+  }
+
+  return "📝"; // Emoji par défaut
+}
+
+// Data formatting functions
 function formatResponseFromApi(json) {
   return json.results
     .map((page) => ({
       dataId: page.properties["Système"].title[0].mention.page.id,
       dataName: page.properties["Système"].title[0].plain_text,
+      dataIcon: extractIconFromName(
+        page.properties["Système"].title[0].plain_text,
+        page.properties
+      ),
       dataUrl: page.properties["Système"].title[0].href,
       dataPrevious: new Date(page.properties["Previous"].formula.string),
       dataNext: new Date(page.properties["Next"].formula.date.start),
@@ -199,9 +219,10 @@ function formatResponseFromApi(json) {
       dataJours: page.properties["Jours"].formula.number,
       dataActions: page.properties["Actions"].formula.string,
       dataCommentaire: page.properties["Commentaire"].formula.string,
-      dataNameWithEmoji: `${
-        page.properties["Catégorie"].select.name.split(" ")[0]
-      } ${page.properties["Système"].title[0].plain_text}`,
+      dataNameWithEmoji: `${extractIconFromName(
+        page.properties["Système"].title[0].plain_text,
+        page.properties
+      )} ${page.properties["Système"].title[0].plain_text}`,
     }))
     .sort((a, b) => a.dataNext - b.dataNext);
 }
@@ -212,7 +233,24 @@ function getTasksToday(tasks) {
 
 // Notification handling functions
 function handleNotifications(todayTasks, allTasks) {
+  // Vérification initiale : si pas de tâches aujourd'hui, on sort
+  if (!todayTasks || todayTasks.length === 0) {
+    return;
+  }
+
   const dateNow = new Date();
+  const currentHour = dateNow.getHours();
+  const currentMinutes = dateNow.getMinutes();
+
+  // Vérifier si on est dans une période de notification valide
+  const isMorningNotificationTime = currentHour >= 7 && currentMinutes >= 30;
+  const isEveningNotificationTime = currentHour >= 19;
+
+  // Si on n'est pas dans une période de notification valide, on sort
+  if (!isMorningNotificationTime && !isEveningNotificationTime) {
+    return;
+  }
+
   const triggerDate = new Date(
     dateNow.getTime() + 1000 * WIDGET_CONFIG.notificationDelay
   );
@@ -220,21 +258,38 @@ function handleNotifications(todayTasks, allTasks) {
   let tasksToNotify = todayTasks;
   let tasksToSet = allTasks;
 
+  // Si on a des données de notification précédentes, on les utilise
   if (Keychain.contains(STORAGE_KEYS.lastUpdate)) {
     const lastDatesUpdated = JSON.parse(Keychain.get(STORAGE_KEYS.lastUpdate));
     if (lastDatesUpdated) {
       setLastDatesUpdated(lastDatesUpdated, tasksToSet);
-      tasksToNotify = getFilterTasksNotifications(todayTasks, lastDatesUpdated);
+
+      // Filtrer les notifications selon l'heure
+      if (isMorningNotificationTime) {
+        tasksToNotify = getFilterTasksNotifications(
+          todayTasks,
+          lastDatesUpdated
+        );
+      } else if (isEveningNotificationTime) {
+        tasksToNotify = getFilterEveningNotifications(
+          todayTasks,
+          lastDatesUpdated
+        );
+      }
     }
   }
 
-  if (tasksToNotify?.length > 0) {
-    const dateFormatted = dateNow.toLocaleDateString();
-    tasksToNotify.forEach((task) => {
-      createNotification(task, triggerDate);
-      updateLastDatesUpdated(task, tasksToSet, dateFormatted);
-    });
+  // Si on n'a pas de tâches à notifier après filtrage, on sort
+  if (!tasksToNotify || tasksToNotify.length === 0) {
+    return;
   }
+
+  // Créer les notifications et mettre à jour le stockage
+  const dateFormatted = dateNow.toLocaleDateString();
+  tasksToNotify.forEach((task) => {
+    createNotification(task, triggerDate);
+    updateLastDatesUpdated(task, tasksToSet, dateFormatted);
+  });
 
   const simplifiedTasks = simplifyTasksToStore(tasksToSet);
   Keychain.set(STORAGE_KEYS.lastUpdate, JSON.stringify(simplifiedTasks));
@@ -259,6 +314,28 @@ function getFilterTasksNotifications(todayTasks, storageLastDatesUpdated) {
       return inStorage ? inStorage.lastDateNotification !== dateToday : true;
     })
     .map((task) => ({ ...task, lastDateNotification: dateToday }));
+}
+
+function getFilterEveningNotifications(todayTasks, storageLastDatesUpdated) {
+  const dateToday = new Date().toLocaleDateString();
+  return todayTasks
+    .filter((task) => {
+      const inStorage = storageLastDatesUpdated.find(
+        (storageItem) => storageItem.dataId === task.dataId
+      );
+
+      // On notifie le soir seulement si la dernière notification date du matin
+      return (
+        inStorage &&
+        inStorage.lastDateNotification === dateToday &&
+        !inStorage.eveningNotification
+      );
+    })
+    .map((task) => ({
+      ...task,
+      lastDateNotification: dateToday,
+      eveningNotification: true,
+    }));
 }
 
 function setLastDatesUpdated(lastDatesUpdatedInStorage, tasksToSetToStore) {

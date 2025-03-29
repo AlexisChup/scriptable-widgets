@@ -158,10 +158,30 @@ function buildErrorWidget() {
 }
 
 // Data formatting functions
+function extractIconFromName(taskName, properties) {
+  // Chercher dans les clés des propriétés une correspondance avec le nom de la tâche
+  const matchingKey = Object.keys(properties).find((key) =>
+    key.includes(taskName)
+  );
+
+  if (matchingKey) {
+    // Extraire l'emoji du début de la clé si présent
+    const emojiMatch = matchingKey.match(/^[\u{1F300}-\u{1F9FF}]/u);
+    if (emojiMatch) return emojiMatch[0];
+  }
+
+  return "📝"; // Emoji par défaut
+}
+
+// Data formatting functions
 function formatResponseFromApi(json) {
   return json.results
     .map((page) => ({
       dataName: page.properties["Système"].title[0].plain_text,
+      dataIcon: extractIconFromName(
+        page.properties["Système"].title[0].plain_text,
+        page.properties
+      ),
       dataUrl: page.properties["Système"].title[0].href,
       dataPrevious: new Date(page.properties["Previous"].formula.string),
       dataNext: new Date(page.properties["Next"].formula.date.start),
@@ -178,9 +198,7 @@ function addDataView(widget, item) {
   viewStack.layoutVertically();
   viewStack.url = item.dataUrl;
 
-  const name = viewStack.addText(
-    `${item.dataCategorie.split(" ")[0]} ${item.dataName}`
-  );
+  const name = viewStack.addText(`${item.dataIcon} ${item.dataName}`);
   name.font = Font.blackSystemFont(14);
 
   const date = viewStack.addText(
