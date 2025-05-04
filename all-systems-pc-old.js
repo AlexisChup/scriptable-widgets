@@ -101,39 +101,42 @@ function extractIconFromName(taskName, properties) {
 function formatResponseFromApi(json) {
   const dateNow = new Date();
 
-  return json.results.map((page, _) => {
-    // console.log("page: ");
-    console.log(JSON.stringify(page, null, 4));
+  return json.results
+    .map((page, _) => {
+      const taskName = page.properties["Système"].title[0].plain_text;
+      const icon = extractIconFromName(taskName, page.properties);
+      console.log("icon: " + icon);
 
-    const dataIcon = page.icon.emoji;
-    // console.log("icon: " + icon);
+      const dataId = page.properties["Système"].title[0].mention.page.id;
+      const dataName = page.properties["Système"].title[0].plain_text;
+      const dataUrl = page.properties["Système"].title[0].href;
 
-    const dataName = page.properties["Name"].title[0].plain_text;
-    const dataUrl = page.url;
-    // console.log("icon: " + dataUrl);
+      const dataPrevious = new Date(page.properties["Previous"].formula.string);
+      const dataNext = new Date(page.properties["Next"].formula.date.start);
 
-    // console.log("page.properties: " + JSON.stringify(page.properties, null, 4));
+      const dataCategorie = page.properties["Catégorie"].select.name;
+      const dataJours = page.properties["Jours"].formula.number;
 
-    // console.log(
-    //   "page.properties[🔒] Next Dates: " +
-    //     page.properties["(🔒) Next Dates"].formula.start
-    // );
-    const dataNext = new Date(
-      page.properties["(🔒) FormattedDate"].formula.date.start
-    );
+      const dataActions = page.properties["Actions"].formula.string;
+      const dataCommentaire = page.properties["Commentaire"].formula.string;
 
-    const dataJours = page.properties["(🔒) When (days)"].formula.number;
+      // console.log("dataId");
+      // console.log(dataId);
 
-    return {
-      dataIcon,
-      dataName,
-      dataUrl,
-      dataJours,
-      dataNext,
-    };
-  });
-  // .sort((a, b) => a.dataNext - b.dataNext)
-  // .filter((task) => task.dataJours <= 0);
+      return {
+        dataId,
+        dataName,
+        dataUrl,
+        dataCategorie,
+        dataJours,
+        dataNext,
+        dataPrevious,
+        dataActions,
+        dataCommentaire,
+      };
+    })
+    .sort((a, b) => a.dataNext - b.dataNext)
+    .filter((task) => task.dataJours <= 0);
 }
 
 // Appel de la fonction

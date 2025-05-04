@@ -39,6 +39,7 @@ function convertStoredDates(data) {
   return data.map((item) => ({
     ...item,
     dataNext: new Date(item.dataNext),
+    dataPrevious: new Date(item.dataPrevious),
   }));
 }
 
@@ -157,16 +158,37 @@ function buildErrorWidget() {
 }
 
 // Data formatting functions
+function extractIconFromName(taskName, properties) {
+  // Chercher dans les clés des propriétés une correspondance avec le nom de la tâche
+  const matchingKey = Object.keys(properties).find((key) =>
+    key.includes(taskName)
+  );
+
+  if (matchingKey) {
+    // Extraire l'emoji du début de la clé si présent
+    const emojiMatch = matchingKey.match(/^[\u{1F300}-\u{1F9FF}]/u);
+    if (emojiMatch) return emojiMatch[0];
+  }
+
+  return "📝"; // Emoji par défaut
+}
+
+// Data formatting functions
 function formatResponseFromApi(json) {
   return json.results
     .map((page) => ({
-      dataName: page.properties["Name"].title[0].plain_text,
-      dataIcon: page.icon.emoji,
-      dataUrl: page.url,
-      dataNext: new Date(
-        page.properties["(🔒) FormattedDate"].formula.date.start
+      dataName: page.properties["Système"].title[0].plain_text,
+      dataIcon: extractIconFromName(
+        page.properties["Système"].title[0].plain_text,
+        page.properties
       ),
-      dataJours: page.properties["(🔒) When (days)"].formula.number,
+      dataUrl: page.properties["Système"].title[0].href,
+      dataPrevious: new Date(page.properties["Previous"].formula.string),
+      dataNext: new Date(page.properties["Next"].formula.date.start),
+      dataCategorie: page.properties["Catégorie"].select.name,
+      dataJours: page.properties["Jours"].formula.number,
+      dataActions: page.properties["Actions"].formula.string,
+      dataCommentaire: page.properties["Commentaire"].formula.string,
     }))
     .sort((a, b) => a.dataNext - b.dataNext);
 }

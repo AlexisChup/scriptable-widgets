@@ -1,0 +1,1 @@
+if(empty(prop("Email")), prop("DM"), prop("Email"))
