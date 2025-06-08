@@ -345,6 +345,11 @@ function updateLastDatesUpdated(taskToNotifyMap, tasksToSet, dateFormatted) {
     (taskToSetMap) => taskToSetMap.dataId === taskToNotifyMap.dataId
   );
   taskToSetItem.lastDateNotification = dateFormatted;
+
+  // Si une notification du soir est envoyée, on la marque
+  if (taskToNotifyMap.eveningNotification) {
+    taskToSetItem.eveningNotification = true;
+  }
 }
 
 function simplifyTasksToStore(tasksToSet) {
